@@ -8,12 +8,22 @@ public sealed record ScanOptions(
     int MaxLargeFiles = 2_000,
     int MaxIssues = 500);
 
+public enum ScanPhase
+{
+    Enumerating,
+    Aggregating
+}
+
 public sealed record ScanProgress(
     long FilesScanned,
     long DirectoriesScanned,
     long BytesScanned,
     string CurrentPath,
-    TimeSpan Elapsed);
+    TimeSpan Elapsed)
+{
+    public long IssuesFound { get; init; }
+    public ScanPhase Phase { get; init; } = ScanPhase.Enumerating;
+}
 
 public sealed record FileEntry(
     string Name,

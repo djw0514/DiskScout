@@ -5,7 +5,8 @@ DiskScout 是一个面向 Windows 的只读磁盘空间排查工具。它用于�
 ## 已实现功能
 
 - 扫描系统盘、普通盘或任意指定目录
-- 实时显示已扫描容量、文件数、目录数和当前路径
+- 独立的准备、扫描、汇总、停止和完成界面，实时显示容量、文件数、目录数、当前路径、平均扫描速度和访问问题
+- 扫描计时持续更新；停止后保留明确标注的部分统计，完成后展示目录占比和结果排行
 - 按递归容量排列目录，按阈值筛选大文件
 - 汇总文档、图片、视频、压缩包、程序、开发文件等类别
 - 自动给出大目录、旧大文件、归档/虚拟磁盘和权限问题提示
@@ -64,10 +65,18 @@ dotnet run --project .\DiskScout.App\DiskScout.App.csproj
 dotnet build .\DiskScout.sln
 dotnet run --project .\DiskScout.SmokeTests\DiskScout.SmokeTests.csproj
 dotnet run --project .\DiskScout.UiSmokeTests\DiskScout.UiSmokeTests.csproj
-dotnet publish .\DiskScout.App\DiskScout.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\dist\DiskScout-win-x64
+dotnet publish .\DiskScout.App\DiskScout.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o .\publish
 ```
 
-核心测试覆盖容量、分类、深层目录、Top N、阈值边界、取消和并发扫描；WPF 测试覆盖连续扫描时的筛选、取消后重扫，以及旧 AI 请求结束时的界面状态。WPF 测试不会显示窗口，AI 请求使用本地模拟响应，无需 API Key 或网络。
+以上发布命令生成 `publish\DiskScout.exe`，可在 Windows x64 上直接运行。`dotnet build` 只更新构建输出，不会更新 `publish` 或已有 ZIP；修改源码后需要重新执行发布命令。旧版 `DiskScout.App.exe` 1.0.0 存在磁盘占用进度条绑定只读属性导致的启动崩溃，请使用重新发布的 `DiskScout.exe`。
+
+核心测试覆盖容量、分类、深层目录、Top N、阈值边界、扫描及汇总阶段取消和并发扫描；WPF 测试覆盖实时扫描反馈、状态切换、磁盘卡片的绑定和布局、连续扫描时的筛选、取消后重扫，以及旧 AI 请求结束时的界面状态。WPF 测试不会显示窗口，AI 请求使用本地模拟响应，无需 API Key 或网络。
+
+使用示例数据生成界面预览（包含扫描中、完成、小窗口和 AI 页，不扫描个人文件）：
+
+```powershell
+dotnet run --project .\DiskScout.UiSmokeTests -c Release -- --screenshots artifacts/ui-review
+```
 
 ### 扫描性能验证
 

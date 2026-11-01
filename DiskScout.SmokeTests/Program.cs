@@ -124,6 +124,51 @@ await Run("最终进度回调", async () =>
         Equal(4L, latest!.FilesScanned, "最终进度文件数");
         Equal(7_680L, latest.BytesScanned, "最终进度容量");
         Equal(result.Duration, latest.Elapsed, "最终进度包含结果整理耗时");
+        Equal(ScanPhase.Aggregating, latest.Phase, "最终进度阶段");
+        Equal(0L, latest.IssuesFound, "无访问问题的进度计数");
+    });
+});
+
+await Run("汇总阶段开始与完成均上报进度", async () =>
+{
+    await WithFixture(async root =>
+    {
+        var snapshots = new List<ScanProgress>();
+        var progress = new InlineProgress<ScanProgress>(snapshots.Add);
+        var result = await new DiskScanner().ScanAsync(new ScanOptions(root), progress);
+        var aggregating = snapshots.Where(x => x.Phase == ScanPhase.Aggregating).ToArray();
+        True(aggregating.Length >= 2, "即使快速扫描也应报告汇总开始与完成");
+        Equal(result.FileCount, aggregating[0].FilesScanned, "进入汇总前应已遍历全部文件");
+        Equal(result.DirectoryCount, aggregating[0].DirectoriesScanned, "进入汇总前应已遍历全部目录");
+        Equal(result.TotalBytes, aggregating[0].BytesScanned, "汇总阶段容量保持一致");
+        True(aggregating[0].Elapsed <= aggregating[^1].Elapsed, "汇总耗时不应倒退");
+        True(snapshots.SkipWhile(x => x.Phase != ScanPhase.Aggregating)
+            .All(x => x.Phase == ScanPhase.Aggregating), "汇总后不应回到遍历阶段");
+    });
+});
+
+await Run("汇总阶段取消空目录扫描", async () =>
+{
+    await WithFixture(async root =>
+    {
+        var empty = Directory.CreateDirectory(Path.Combine(root, "empty")).FullName;
+        using var cancellation = new CancellationTokenSource();
+        var aggregationReports = 0;
+        var progress = new InlineProgress<ScanProgress>(value =>
+        {
+            if (value.Phase != ScanPhase.Aggregating) return;
+            aggregationReports++;
+            cancellation.Cancel();
+        });
+        try
+        {
+            await new DiskScanner().ScanAsync(new ScanOptions(empty), progress, cancellation.Token);
+            throw new InvalidOperationException("汇总开始时收到取消信号后不应返回结果");
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        Equal(1, aggregationReports, "取消后不应报告汇总完成");
     });
 });
 

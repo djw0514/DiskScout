@@ -59,7 +59,9 @@ public sealed class DiskScanner
         long fileCount = 0;
         long directoryCount = 0;
         long totalBytes = 0;
+        long issueCount = 0;
         var currentPath = root;
+        var phase = ScanPhase.Enumerating;
 
         while (pending.Count > 0)
         {
@@ -106,6 +108,10 @@ public sealed class DiskScanner
 
             ReportProgressIfDue(force: false);
         }
+
+        phase = ScanPhase.Aggregating;
+        ReportProgressIfDue(force: true);
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Parents are discovered before their children. Reverse discovery order
         // therefore aggregates every descendant before its parent, without sorting paths.
@@ -206,6 +212,7 @@ public sealed class DiskScanner
 
         void AddIssue(string path, Exception exception)
         {
+            issueCount++;
             if (issues.Count >= Math.Max(0, options.MaxIssues)) return;
             var kind = exception switch
             {
@@ -221,7 +228,11 @@ public sealed class DiskScanner
         {
             if (progress is null || (!force && progressWatch.ElapsedMilliseconds < 120)) return;
             progressWatch.Restart();
-            progress.Report(new ScanProgress(fileCount, directoryCount, totalBytes, currentPath, watch.Elapsed));
+            progress.Report(new ScanProgress(fileCount, directoryCount, totalBytes, currentPath, watch.Elapsed)
+            {
+                IssuesFound = issueCount,
+                Phase = phase
+            });
         }
     }
 

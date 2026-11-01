@@ -11,7 +11,9 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using DiskScout.Core;
+using Brush = System.Windows.Media.Brush;
 using Clipboard = System.Windows.Clipboard;
 using Color = System.Windows.Media.Color;
 using MessageBox = System.Windows.MessageBox;
@@ -27,10 +29,30 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _aiReviewCancellation;
     private ScanResult? _lastResult;
     private bool _isClosed;
+    private readonly Stopwatch _scanUiWatch = new();
+    private readonly DispatcherTimer _scanUiTimer;
+    private ScanProgress? _latestScanProgress;
+    private TimeSpan _lastProgressReceivedAt;
+    private ScanUiState _scanUiState = ScanUiState.Ready;
+
+    private enum ScanUiState { Ready, Scanning, Stopping, Completed, Cancelled, Failed }
 
     public MainWindow()
     {
         InitializeComponent();
+        Height = Math.Max(MinHeight, Math.Min(Height, SystemParameters.WorkArea.Height - 24));
+        Width = Math.Max(MinWidth, Math.Min(Width, SystemParameters.WorkArea.Width - 24));
+        _scanUiTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+        _scanUiTimer.Tick += (_, _) => RefreshScanClock();
+        ScopeTextBox.TextChanged += (_, _) =>
+        {
+            if (_scanUiState == ScanUiState.Ready)
+                SetActivityPath(string.IsNullOrWhiteSpace(ScopeTextBox.Text) ? "选择左侧磁盘，或输入文件夹路径" : ScopeTextBox.Text);
+        };
+        SetAiReviewState(running: false);
         Loaded += MainWindow_Loaded;
     }
 
@@ -45,7 +67,11 @@ public partial class MainWindow : Window
         if (startupPath is not null)
             ScopeTextBox.Text = startupPath;
         if (Environment.GetCommandLineArgs().Contains("--show-ai-review", StringComparer.OrdinalIgnoreCase))
+        {
+            ActivityPanel.Visibility = Visibility.Collapsed;
+            ResultTabs.Visibility = Visibility.Visible;
             ResultTabs.SelectedIndex = 4;
+        }
     }
 
     private void LoadDrives()
@@ -74,7 +100,7 @@ public partial class MainWindow : Window
 
     private void UpdateAdministratorBadge()
     {
-        var identity = WindowsIdentity.GetCurrent();
+        using var identity = WindowsIdentity.GetCurrent();
         var principal = new WindowsPrincipal(identity);
         var isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
         AdminBadgeText.Text = isAdmin ? "管理员权限" : "普通权限";
@@ -112,6 +138,12 @@ public partial class MainWindow : Window
         {
             ScanButton.IsEnabled = false;
             ScanButton.Content = "正在停止…";
+            _scanUiState = ScanUiState.Stopping;
+            ActivityTitleText.Text = "正在停止扫描";
+            ActivityDescriptionText.Text = "正在结束当前读取，请稍候。";
+            DurationHintText.Text = "等待当前读取结束";
+            SetScanBadge("正在停止", "WarningBrush");
+            StatusText.Text = "正在停止扫描，等待当前读取返回…";
             _scanCancellation.Cancel();
             return;
         }
@@ -127,8 +159,9 @@ public partial class MainWindow : Window
         var threshold = GetSelectedThreshold();
         using var cancellation = new CancellationTokenSource();
         _scanCancellation = cancellation;
-        SetScanningState(true);
         ClearResults();
+        BeginScanPresentation(path);
+        SetScanningState(true);
 
         var progress = new Progress<ScanProgress>(value =>
         {
@@ -149,18 +182,19 @@ public partial class MainWindow : Window
         catch (OperationCanceledException)
         {
             if (!_isClosed)
-                StatusText.Text = "扫描已停止；未完成的数据没有展示。";
+                PresentInterruptedScan(failed: false);
         }
         catch (Exception ex)
         {
             if (!_isClosed)
             {
-                StatusText.Text = "扫描失败";
-                MessageBox.Show(this, ex.Message, "扫描失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                PresentInterruptedScan(failed: true, ex.Message);
             }
         }
         finally
         {
+            _scanUiTimer.Stop();
+            _scanUiWatch.Stop();
             _scanCancellation = null;
             if (!_isClosed)
                 SetScanningState(false);
@@ -178,7 +212,8 @@ public partial class MainWindow : Window
     private void SetScanningState(bool scanning)
     {
         ScanButton.IsEnabled = true;
-        ScanButton.Content = scanning ? "停止扫描" : "开始扫描";
+        ScanButton.Content = scanning ? "停止扫描" : _scanUiState == ScanUiState.Ready ? "开始扫描" : "重新扫描";
+        ScanButton.Style = (Style)FindResource(scanning ? "StopButton" : "PrimaryButton");
         ScopeTextBox.IsEnabled = !scanning;
         BrowseButton.IsEnabled = !scanning;
         ThresholdComboBox.IsEnabled = !scanning;
@@ -192,12 +227,127 @@ public partial class MainWindow : Window
 
     private void UpdateProgress(ScanProgress progress)
     {
+        if (_scanUiState is not ScanUiState.Scanning) return;
+        _latestScanProgress = progress;
+        _lastProgressReceivedAt = _scanUiWatch.Elapsed;
         TotalSizeText.Text = ByteSizeFormatter.Format(progress.BytesScanned);
         FileCountText.Text = progress.FilesScanned.ToString("N0");
         DirectoryCountText.Text = progress.DirectoriesScanned.ToString("N0");
-        DurationText.Text = $"{Math.Max(1, (int)progress.Elapsed.TotalSeconds)} 秒";
-        StatusText.Text = $"正在扫描：{progress.CurrentPath}";
+        ScanIssueCountText.Text = progress.IssuesFound.ToString("N0");
+        ScanIssueCountText.Foreground = (Brush)FindResource(progress.IssuesFound > 0 ? "WarningBrush" : "TextBrush");
+        SetActivityPath(progress.CurrentPath);
+        if (progress.Phase == ScanPhase.Aggregating)
+        {
+            WorkspaceTitleText.Text = "正在整理结果";
+            ActivityTitleText.Text = "文件读取完成，正在汇总";
+            ActivityDescriptionText.Text = "正在整理目录容量、文件排行和空间建议。";
+            ActivityPathCaptionText.Text = "最后读取的目录";
+            DurationHintText.Text = "整理统计中";
+            SetScanBadge("整理中", "SecondaryAccentBrush");
+            StatusText.Text = "正在汇总目录容量与文件排行…";
+        }
+        else
+        {
+            ActivityTitleText.Text = "正在扫描文件与目录";
+            ActivityDescriptionText.Text = "持续读取文件信息，扫描结果将在完成后显示。";
+            StatusText.Text = $"正在扫描：{progress.CurrentPath}";
+        }
+        RefreshScanClock();
     }
+
+    private void BeginScanPresentation(string path)
+    {
+        _scanUiState = ScanUiState.Scanning;
+        _latestScanProgress = null;
+        _lastProgressReceivedAt = TimeSpan.Zero;
+        _scanUiWatch.Restart();
+        _scanUiTimer.Start();
+        ActivityPanel.Visibility = Visibility.Visible;
+        ResultTabs.Visibility = Visibility.Collapsed;
+        ActivityGuidePanel.Visibility = Visibility.Collapsed;
+        ActivityMetricsPanel.Visibility = Visibility.Visible;
+        ActivityIconText.Text = "↻";
+        ActivityTitleText.Text = "正在准备扫描";
+        ActivityDescriptionText.Text = "正在打开所选目录，即将开始统计文件信息。";
+        ActivityPathCaptionText.Text = "正在读取";
+        SetActivityPath(path);
+        ActivityFooterText.Text = "扫描只读取文件信息，你可以随时停止。";
+        WorkspaceTitleText.Text = "扫描进行中";
+        WorkspaceHintText.Text = path;
+        WorkspaceHintText.ToolTip = path;
+        SizeMetricHintText.Text = "累计文件逻辑大小";
+        FileMetricHintText.Text = "已读取的文件";
+        FolderMetricHintText.Text = "包含扫描根目录";
+        DurationHintText.Text = "扫描中 · 实时更新";
+        ScanRateText.Text = "计算中…";
+        ScanIssueCountText.Text = "0";
+        ScanIssueCountText.Foreground = (Brush)FindResource("TextBrush");
+        SetScanBadge("扫描中", "AccentBrush");
+    }
+
+    private void RefreshScanClock()
+    {
+        if (_scanUiState is not (ScanUiState.Scanning or ScanUiState.Stopping)) return;
+        var elapsed = GetScanElapsed();
+        DurationText.Text = FormatElapsed(elapsed);
+        if (_latestScanProgress?.Phase == ScanPhase.Aggregating)
+            ScanRateText.Text = "汇总中";
+        else if (elapsed.TotalSeconds >= 0.5)
+            ScanRateText.Text = $"{(_latestScanProgress?.FilesScanned ?? 0) / elapsed.TotalSeconds:N0} 个/秒";
+    }
+
+    private TimeSpan GetScanElapsed()
+    {
+        var elapsed = _scanUiWatch.Elapsed;
+        var reportedElapsed = _latestScanProgress is null
+            ? TimeSpan.Zero
+            : _latestScanProgress.Elapsed + (elapsed - _lastProgressReceivedAt);
+        return elapsed > reportedElapsed ? elapsed : reportedElapsed;
+    }
+
+    private void SetActivityPath(string path)
+    {
+        ActivityPathText.Text = path;
+        ActivityPathText.ToolTip = path;
+    }
+
+    private void SetScanBadge(string text, string brushKey)
+    {
+        ScanStateText.Text = text;
+        ScanStateText.Foreground = (Brush)FindResource(brushKey);
+        ScanStateBorder.BorderBrush = (Brush)FindResource(brushKey);
+        ActivityIconText.Foreground = (Brush)FindResource(brushKey);
+    }
+
+    private void PresentInterruptedScan(bool failed, string? message = null)
+    {
+        RefreshScanClock();
+        var elapsed = GetScanElapsed();
+        ScanRateText.Text = elapsed.TotalSeconds >= 0.5
+            ? $"{(_latestScanProgress?.FilesScanned ?? 0) / elapsed.TotalSeconds:N0} 个/秒"
+            : "—";
+        _scanUiState = failed ? ScanUiState.Failed : ScanUiState.Cancelled;
+        WorkspaceTitleText.Text = failed ? "扫描未能完成" : "扫描已停止";
+        ActivityTitleText.Text = WorkspaceTitleText.Text;
+        ActivityDescriptionText.Text = failed ? message ?? "请检查路径是否可访问后重试。" : "可以调整扫描范围，再开始一次新的扫描。";
+        ActivityIconText.Text = failed ? "!" : "Ⅱ";
+        ActivityPathCaptionText.Text = "最后读取的位置";
+        ActivityFooterText.Text = "上方为本轮已读取的部分统计，完整排行需等待扫描完成。";
+        ActivityMetricsPanel.Visibility = Visibility.Visible;
+        ActivityGuidePanel.Visibility = Visibility.Collapsed;
+        ActivityPanel.Visibility = Visibility.Visible;
+        ResultTabs.Visibility = Visibility.Collapsed;
+        SizeMetricHintText.Text = "部分统计 · 扫描未完成";
+        FileMetricHintText.Text = "停止前已读取";
+        FolderMetricHintText.Text = "停止前已读取";
+        DurationHintText.Text = failed ? "本次扫描失败" : "本次扫描已停止";
+        SetScanBadge(failed ? "未完成" : "已停止", "WarningBrush");
+        StatusText.Text = failed ? $"扫描失败：{message}" : "扫描已停止 · 已保留过程计数，可重新扫描。";
+    }
+
+    private static string FormatElapsed(TimeSpan elapsed) => elapsed.TotalHours >= 1
+        ? $"{(int)elapsed.TotalHours}:{elapsed.Minutes:00}:{elapsed.Seconds:00}"
+        : $"{(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
 
     private void ClearResults()
     {
@@ -205,7 +355,7 @@ public partial class MainWindow : Window
         TotalSizeText.Text = "0 B";
         FileCountText.Text = "0";
         DirectoryCountText.Text = "0";
-        DurationText.Text = "计时中…";
+        DurationText.Text = "00:00";
         InsightsList.ItemsSource = null;
         TopFoldersList.ItemsSource = null;
         LargeFilesGrid.ItemsSource = null;
@@ -215,21 +365,43 @@ public partial class MainWindow : Window
         AiReviewsGrid.ItemsSource = null;
         AiReviewProgressBar.Value = 0;
         AiStatusText.Text = "请先完成磁盘扫描";
+        EmptyResultText.Visibility = Visibility.Collapsed;
+        LargeFileCountText.Text = "等待扫描结果";
+        FolderCountText.Text = "等待扫描结果";
+        IssueCountText.Text = "等待扫描结果";
     }
 
     private void PresentResult(ScanResult result)
     {
+        var totalElapsed = GetScanElapsed();
+        _scanUiState = ScanUiState.Completed;
+        ActivityPanel.Visibility = Visibility.Collapsed;
+        ResultTabs.Visibility = Visibility.Visible;
+        WorkspaceTitleText.Text = "空间概览";
+        WorkspaceHintText.Text = result.RootPath;
+        WorkspaceHintText.ToolTip = result.RootPath;
+        SetScanBadge(result.Issues.Count == 0 ? "扫描完成" : "完成 · 有访问问题",
+            result.Issues.Count == 0 ? "AccentBrush" : "WarningBrush");
         TotalSizeText.Text = result.TotalBytesText;
         FileCountText.Text = result.FileCountText;
         DirectoryCountText.Text = result.DirectoryCountText;
-        DurationText.Text = $"{result.DurationText} / {result.Issues.Count:N0}";
+        DurationText.Text = FormatElapsed(result.Duration > totalElapsed ? result.Duration : totalElapsed);
+        SizeMetricHintText.Text = "文件逻辑大小";
+        FileMetricHintText.Text = $"{result.LargeFiles.Count:N0} 个候选大文件";
+        FolderMetricHintText.Text = "按递归容量排列";
+        DurationHintText.Text = $"完成于 {DateTime.Now:HH:mm}";
         InsightsList.ItemsSource = result.Insights;
-        TopFoldersList.ItemsSource = result.Folders.Take(9);
+        TopFoldersList.ItemsSource = result.Folders.Take(7)
+            .Select((folder, index) => new FolderOverviewItem(folder, result.TotalBytes, index + 1)).ToArray();
         LargeFilesGrid.ItemsSource = result.LargeFiles;
         ApplyFileFilter();
         FoldersGrid.ItemsSource = result.Folders;
         CategoriesGrid.ItemsSource = result.Categories;
         IssuesGrid.ItemsSource = result.Issues;
+        FolderCountText.Text = $"{result.Folders.Count:N0} 个目录 · 包含子目录容量";
+        IssueCountText.Text = $"已记录 {result.Issues.Count:N0} 项访问问题";
+        EmptyResultText.Visibility = result.FileCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+        EmptyResultText.Text = result.Issues.Count > 0 ? "未读取到文件，请查看「访问问题」了解原因。" : "该目录内没有可统计的文件。";
         AiStatusText.Text = result.LargeFiles.Count == 0
             ? "当前阈值下没有候选大文件"
             : $"可审查 {result.LargeFiles.Count:N0} 个大文件";
@@ -241,11 +413,12 @@ public partial class MainWindow : Window
 
     private void ApplyFileFilter()
     {
-        if (LargeFilesGrid.ItemsSource is null) return;
+        if (LargeFilesGrid?.ItemsSource is null) return;
         var term = FileSearchBox.Text.Trim();
         var view = CollectionViewSource.GetDefaultView(LargeFilesGrid.ItemsSource);
         view.Filter = term.Length == 0 ? null : item => item is FileEntry file &&
             file.FullPath.Contains(term, StringComparison.OrdinalIgnoreCase);
+        LargeFileCountText.Text = $"{view.Cast<object>().Count():N0} / {_lastResult?.LargeFiles.Count ?? LargeFilesGrid.Items.Count:N0} 个大文件";
     }
 
     private void CopySelectedPath_Click(object sender, RoutedEventArgs e)
@@ -507,10 +680,22 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _isClosed = true;
+        _scanUiTimer.Stop();
+        _scanUiWatch.Stop();
         _scanCancellation?.Cancel();
         _aiReviewCancellation?.Cancel();
         base.OnClosed(e);
     }
+}
+
+public sealed class FolderOverviewItem(FolderEntry folder, long totalBytes, int rank)
+{
+    public string Name => folder.Name;
+    public string FullPath => folder.FullPath;
+    public string SizeText => folder.SizeText;
+    public string RankText => rank.ToString("00");
+    public double Percentage => totalBytes <= 0 ? 0 : Math.Clamp(folder.Size * 100d / totalBytes, 0, 100);
+    public string ShareText => $"{Percentage:0.#}%";
 }
 
 public sealed class DriveViewModel

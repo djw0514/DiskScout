@@ -4,7 +4,7 @@
         Title="DiskScout 磁盘侦察" Height="860" Width="1380"
         MinHeight="700" MinWidth="1080" WindowStartupLocation="CenterScreen"
         Background="{StaticResource PageBrush}" Foreground="{StaticResource TextBrush}"
-        FontFamily="Segoe UI, Microsoft YaHei UI">
+        FontFamily="Segoe UI, Microsoft YaHei UI" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
     <Window.Resources>
         <Style x:Key="MetricLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
@@ -13,22 +13,28 @@
         </Style>
         <Style x:Key="MetricValue" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontSize" Value="27"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="18"/>
+        </Style>
+        <Style x:Key="MetricHint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
         <Style TargetType="TabItem">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="18,11"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
@@ -52,13 +58,13 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="22">
+    <Grid Margin="20,18,20,12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="58"/>
+            <RowDefinition Height="60"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="28"/>
+            <RowDefinition Height="26"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
@@ -67,12 +73,15 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                <Border Width="38" Height="38" CornerRadius="10" Background="{StaticResource AccentBrush}" Margin="0,0,12,0">
-                    <TextBlock Text="◫" Foreground="#07130F" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Border Width="40" Height="40" CornerRadius="11" Background="{StaticResource AccentDarkBrush}" Margin="0,0,12,0">
+                    <Grid Width="21" Height="21">
+                        <Rectangle Width="21" Height="21" RadiusX="4" RadiusY="4" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.6"/>
+                        <Path Data="M 5 6 L 16 6 M 5 10.5 L 12 10.5 M 5 15 L 9 15" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                    </Grid>
                 </Border>
                 <StackPanel>
-                    <TextBlock Text="DiskScout 磁盘侦察" FontSize="20" FontWeight="SemiBold"/>
-                    <TextBlock Text="找出真正占空间的目录和文件" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                    <TextBlock Text="DiskScout" FontSize="21" FontWeight="SemiBold"/>
+                    <TextBlock Text="磁盘侦察 · 看清每一份空间" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0"/>
                 </StackPanel>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
@@ -84,52 +93,65 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="14" Margin="0,4,0,14">
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="16,13" Margin="0,0,0,12">
             <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="42"/></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="135"/>
+                    <ColumnDefinition Width="150"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="ScopeTextBox" VerticalContentAlignment="Center" ToolTip="输入盘符或文件夹路径，例如 C:\"/>
-                <ComboBox x:Name="ThresholdComboBox" Grid.Column="1" Margin="10,0" SelectedIndex="0" ToolTip="大文件判定阈值">
+                <TextBlock Text="扫描范围" Style="{StaticResource MetricLabel}"/>
+                <TextBlock Grid.Column="1" Text="大文件阈值" Style="{StaticResource MetricLabel}" Margin="12,0,0,5"/>
+                <TextBox x:Name="ScopeTextBox" Grid.Row="1" VerticalContentAlignment="Center" ToolTip="输入盘符或文件夹路径，例如 C:\"/>
+                <ComboBox x:Name="ThresholdComboBox" Grid.Row="1" Grid.Column="1" Margin="12,0" SelectedIndex="0" ToolTip="大文件判定阈值">
                     <ComboBoxItem Content="≥ 100 MB" Tag="104857600"/>
                     <ComboBoxItem Content="≥ 500 MB" Tag="524288000"/>
                     <ComboBoxItem Content="≥ 1 GB" Tag="1073741824"/>
                     <ComboBoxItem Content="≥ 5 GB" Tag="5368709120"/>
                 </ComboBox>
-                <Button x:Name="BrowseButton" Grid.Column="2" Style="{StaticResource BaseButton}" Content="选择文件夹" Margin="0,0,10,0" Click="Browse_Click"/>
-                <Button x:Name="ScanButton" Grid.Column="3" Style="{StaticResource PrimaryButton}" Content="开始扫描" MinWidth="112" Click="Scan_Click"/>
+                <Button x:Name="BrowseButton" Grid.Row="1" Grid.Column="2" Style="{StaticResource BaseButton}" Content="选择文件夹" Margin="0,0,12,0" Click="Browse_Click"/>
+                <Button x:Name="ScanButton" Grid.Row="1" Grid.Column="3" Style="{StaticResource PrimaryButton}" Content="开始扫描" MinWidth="124" Click="Scan_Click"/>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="2" Margin="0,0,0,14">
+        <Grid Grid.Row="2" Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,10,0">
-                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="已统计容量"/><TextBlock x:Name="TotalSizeText" Style="{StaticResource MetricValue}" Text="—"/></StackPanel>
+            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,10,0" Padding="18,14" Background="#15302F">
+                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="已统计容量"/><TextBlock x:Name="TotalSizeText" Style="{StaticResource MetricValue}" Foreground="{StaticResource AccentBrush}" Text="—"/><TextBlock x:Name="SizeMetricHintText" Style="{StaticResource MetricHint}" Text="文件逻辑大小"/></StackPanel>
             </Border>
-            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,10,0">
-                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="文件数量"/><TextBlock x:Name="FileCountText" Style="{StaticResource MetricValue}" Text="—"/></StackPanel>
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,10,0" Padding="18,14">
+                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="文件数量"/><TextBlock x:Name="FileCountText" Style="{StaticResource MetricValue}" Text="—"/><TextBlock x:Name="FileMetricHintText" Style="{StaticResource MetricHint}" Text="已发现的文件"/></StackPanel>
             </Border>
-            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0,0,10,0">
-                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="目录数量"/><TextBlock x:Name="DirectoryCountText" Style="{StaticResource MetricValue}" Text="—"/></StackPanel>
+            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0,0,10,0" Padding="18,14">
+                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="目录数量"/><TextBlock x:Name="DirectoryCountText" Style="{StaticResource MetricValue}" Text="—"/><TextBlock x:Name="FolderMetricHintText" Style="{StaticResource MetricHint}" Text="包含扫描根目录"/></StackPanel>
             </Border>
-            <Border Grid.Column="3" Style="{StaticResource Card}">
-                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="扫描耗时 / 访问问题"/><TextBlock x:Name="DurationText" Style="{StaticResource MetricValue}" Text="—"/></StackPanel>
+            <Border Grid.Column="3" Style="{StaticResource Card}" Padding="18,14">
+                <StackPanel><TextBlock Style="{StaticResource MetricLabel}" Text="扫描耗时"/><TextBlock x:Name="DurationText" Style="{StaticResource MetricValue}" Text="00:00"/><TextBlock x:Name="DurationHintText" Style="{StaticResource MetricHint}" Text="等待开始"/></StackPanel>
             </Border>
         </Grid>
 
         <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="244"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="222"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="10" Margin="0,0,14,0">
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="10" Margin="0,0,12,0">
                 <Grid>
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <TextBlock Text="本机磁盘" FontWeight="SemiBold" FontSize="14" Margin="8,4,8,10"/>
-                    <ListBox x:Name="DriveList" Grid.Row="1" Background="Transparent" BorderThickness="0" SelectionChanged="DriveList_SelectionChanged">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <StackPanel Margin="8,5,8,14"><TextBlock Text="本机磁盘" FontWeight="SemiBold" FontSize="14"/><TextBlock Text="选择磁盘，或指定文件夹" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,5,0,0"/></StackPanel>
+                    <ListBox x:Name="DriveList" Grid.Row="1" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="DriveList_SelectionChanged">
+                        <ListBox.Template>
+                            <ControlTemplate TargetType="ListBox">
+                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                    <ScrollViewer Background="Transparent" Padding="{TemplateBinding Padding}" Focusable="False"
+                                                  CanContentScroll="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </ControlTemplate>
+                        </ListBox.Template>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,8"/>
@@ -139,7 +161,7 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="DriveBorder" Background="#0D1422" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="12"><ContentPresenter/></Border>
+                                            <Border x:Name="DriveBorder" Background="#0E1725" BorderBrush="Transparent" BorderThickness="1" CornerRadius="9" Padding="12"><ContentPresenter/></Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsSelected" Value="True"><Setter TargetName="DriveBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter TargetName="DriveBorder" Property="Background" Value="{StaticResource AccentDarkBrush}"/></Trigger>
                                                 <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="DriveBorder" Property="Opacity" Value="0.85"/></Trigger>
@@ -152,62 +174,119 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel>
-                                    <Grid><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/><TextBlock Text="{Binding UsageText}" HorizontalAlignment="Right" Foreground="{StaticResource MutedBrush}" FontSize="11"/></Grid>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding DisplayName}" Margin="0,0,8,0"/><TextBlock Grid.Column="1" Text="{Binding UsageText}" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/></Grid>
                                     <ProgressBar Value="{Binding UsagePercent, Mode=OneWay}" Maximum="100" Height="5" Margin="0,9,0,7" Background="#263247" Foreground="{StaticResource AccentBrush}" BorderThickness="0"/>
-                                    <TextBlock Text="{Binding SpaceText}" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                                    <TextBlock Text="{Binding SpaceText}" Foreground="{StaticResource MutedBrush}" FontSize="10.5" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,12,8,3" Margin="0,10,0,0">
+                        <StackPanel><TextBlock Text="只读扫描" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="不会删除或移动任何文件" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,5,0,0"/></StackPanel>
+                    </Border>
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="12">
-                <TabControl x:Name="ResultTabs" Background="Transparent" BorderThickness="0">
+            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="18,16">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid Margin="2,0,2,18">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,12,0"><TextBlock x:Name="WorkspaceTitleText" Text="空间概览" FontSize="18" FontWeight="SemiBold"/><TextBlock x:Name="WorkspaceHintText" Text="选择范围后，开始一次磁盘空间检查" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,5,0,0" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/></StackPanel>
+                        <Border x:Name="ScanStateBorder" Grid.Column="1" Background="{StaticResource PanelLightBrush}" CornerRadius="12" Padding="11,5" VerticalAlignment="Top"><TextBlock x:Name="ScanStateText" Text="准备就绪" FontSize="11" Foreground="{StaticResource SecondaryAccentBrush}"/></Border>
+                    </Grid>
+                    <Grid x:Name="ActivityPanel" Grid.Row="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalContentAlignment="Center">
+                            <StackPanel MaxWidth="660" Margin="16,4,16,8" HorizontalAlignment="Stretch">
+                                <Border Width="38" Height="38" CornerRadius="12" Background="{StaticResource AccentDarkBrush}" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                    <TextBlock x:Name="ActivityIconText" Text="◫" FontFamily="Segoe UI Symbol" FontSize="24" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock x:Name="ActivityTitleText" Text="从一次扫描，了解你的磁盘" FontSize="22" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="ActivityDescriptionText" Text="找出最大的目录、长期未修改的大文件和主要空间占用。" Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" LineHeight="18" Margin="0,6,0,0"/>
+                                <Border Background="#0C1523" CornerRadius="10" Padding="16,10" Margin="0,12,0,0">
+                                    <StackPanel>
+                                        <TextBlock x:Name="ActivityPathCaptionText" Text="扫描范围" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="ActivityPathText" Text="在上方选择磁盘或文件夹" FontFamily="Cascadia Code, Consolas, Microsoft YaHei UI" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                                        <ProgressBar x:Name="ScanProgressBar" Height="4" Margin="0,8,0,0" IsIndeterminate="False" Visibility="Collapsed" Foreground="{StaticResource AccentBrush}" Background="#24364B" BorderThickness="0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Grid x:Name="ActivityMetricsPanel" Visibility="Collapsed" Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Background="#17263A" CornerRadius="9" Padding="16,8" Margin="0,0,6,0"><StackPanel><TextBlock Text="平均扫描速度" Foreground="{StaticResource MutedBrush}" FontSize="11"/><TextBlock x:Name="ScanRateText" Text="等待数据…" Foreground="{StaticResource SecondaryAccentBrush}" FontSize="17" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel></Border>
+                                    <Border Grid.Column="1" Background="#17263A" CornerRadius="9" Padding="16,8" Margin="6,0,0,0"><StackPanel><TextBlock Text="访问问题" Foreground="{StaticResource MutedBrush}" FontSize="11"/><TextBlock x:Name="ScanIssueCountText" Text="0" Foreground="{StaticResource WarningBrush}" FontSize="17" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel></Border>
+                                </Grid>
+                                <UniformGrid x:Name="ActivityGuidePanel" Columns="3" Margin="0,18,0,0">
+                                    <StackPanel Margin="0,0,12,0"><TextBlock Text="01  选择范围" Foreground="{StaticResource SecondaryAccentBrush}" FontWeight="SemiBold" FontSize="12"/><TextBlock Text="扫描整个磁盘，或只检查一个文件夹。" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" LineHeight="18" Margin="0,6,0,0"/></StackPanel>
+                                    <StackPanel Margin="8,0,8,0"><TextBlock Text="02  实时查看" Foreground="{StaticResource SecondaryAccentBrush}" FontWeight="SemiBold" FontSize="12"/><TextBlock Text="容量与数量持续更新，随时可以停止。" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" LineHeight="18" Margin="0,6,0,0"/></StackPanel>
+                                    <StackPanel Margin="12,0,0,0"><TextBlock Text="03  找到重点" Foreground="{StaticResource SecondaryAccentBrush}" FontWeight="SemiBold" FontSize="12"/><TextBlock Text="按占用排行定位文件，再决定如何整理。" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" LineHeight="18" Margin="0,6,0,0"/></StackPanel>
+                                </UniformGrid>
+                                <TextBlock x:Name="ActivityFooterText" Text="只读取文件信息，不会修改磁盘内容。" TextAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                <TabControl x:Name="ResultTabs" Grid.Row="1" Visibility="Collapsed" Background="Transparent" BorderThickness="0">
                     <TabItem Header="概览与建议">
-                        <Grid Margin="4,14,4,4">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <Grid Margin="2,20,8,4">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="0.95*"/></Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,12,0">
-                                <TextBlock Text="空间诊断" FontSize="17" FontWeight="SemiBold" Margin="2,0,0,10"/>
+                            <TextBlock x:Name="EmptyResultText" Grid.ColumnSpan="2" Visibility="Collapsed" Text="此范围内没有发现可读取的文件。" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,16" TextWrapping="Wrap"/>
+                            <StackPanel Grid.Row="1" Margin="0,0,12,0">
+                                <TextBlock Text="空间诊断" FontSize="15" FontWeight="SemiBold" Margin="2,0,0,12"/>
                                 <ItemsControl x:Name="InsightsList">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#101A2A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="13" Margin="0,0,0,9">
-                                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                    <Border Background="{StaticResource AccentDarkBrush}" CornerRadius="6" Padding="7,4" VerticalAlignment="Top" Margin="0,0,10,0"><TextBlock Text="{Binding LevelText}" Foreground="{StaticResource AccentBrush}" FontSize="11"/></Border>
-                                                    <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Description}" Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" LineHeight="18"/></StackPanel>
-                                                </Grid>
+                                            <Border Background="#0D1725" CornerRadius="9" Padding="14" Margin="0,0,0,10">
+                                                <StackPanel>
+                                                    <Border Background="{StaticResource AccentDarkBrush}" CornerRadius="4" Padding="6,3" HorizontalAlignment="Left" Margin="0,0,0,8"><TextBlock Text="{Binding LevelText}" Foreground="{StaticResource AccentBrush}" FontSize="10"/></Border>
+                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" LineHeight="20"/>
+                                                </StackPanel>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                <TextBlock Text="占用最大的目录" FontSize="17" FontWeight="SemiBold" Margin="2,0,0,10"/>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="12,0,0,0">
+                                <TextBlock Text="占用最大的目录" FontSize="15" FontWeight="SemiBold" Margin="2,0,0,4"/>
+                                <TextBlock Text="容量包含子目录，父子目录占用会重叠" Foreground="{StaticResource MutedBrush}" FontSize="10.5" TextWrapping="Wrap" Margin="2,0,0,16"/>
                                 <ItemsControl x:Name="TopFoldersList">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="2,0,2,13"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                                <StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding FullPath}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip="{Binding FullPath}"/></StackPanel>
-                                                <TextBlock Grid.Column="1" Text="{Binding SizeText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="12,0,0,0"/>
+                                            <Grid Margin="2,0,2,18">
+                                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding RankText}" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding SizeText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" FontSize="12"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding FullPath}" Foreground="{StaticResource MutedBrush}" FontSize="10.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding FullPath}" Margin="0,4,0,8"/>
+                                                <ProgressBar Grid.Row="2" Grid.Column="1" Maximum="100" Height="4" Value="{Binding Percentage, Mode=OneWay}" Background="#223348" Foreground="{StaticResource AccentBrush}" BorderThickness="0" Margin="0,0,10,0"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding ShareText}" Foreground="{StaticResource MutedBrush}" FontSize="10"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
                         </Grid>
+                        </ScrollViewer>
                     </TabItem>
 
                     <TabItem Header="大文件">
                         <Grid Margin="4,12,4,4">
-                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                            <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBox x:Name="FileSearchBox" TextChanged="FileSearchBox_TextChanged" ToolTip="输入文件名或路径筛选"/>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                            <TextBlock x:Name="LargeFileCountText" Text="大文件" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,0,0,10"/>
+                            <Grid Grid.Row="1" Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Grid>
+                                    <TextBox x:Name="FileSearchBox" TextChanged="FileSearchBox_TextChanged" ToolTip="输入文件名或路径筛选"/>
+                                    <TextBlock Text="搜索文件名或路径…" Foreground="{StaticResource MutedBrush}" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=FileSearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
                                 <Button Grid.Column="1" Style="{StaticResource BaseButton}" Content="复制路径" Margin="10,0,0,0" Click="CopySelectedPath_Click"/>
                                 <Button Grid.Column="2" Style="{StaticResource BaseButton}" Content="打开位置" Margin="8,0,0,0" Click="OpenSelected_Click"/>
                                 <Button Grid.Column="3" Style="{StaticResource BaseButton}" Content="导出 CSV" Margin="8,0,0,0" Click="ExportCsv_Click"/>
                             </Grid>
-                            <DataGrid x:Name="LargeFilesGrid" Grid.Row="1" MouseDoubleClick="LargeFilesGrid_MouseDoubleClick">
+                            <DataGrid x:Name="LargeFilesGrid" Grid.Row="2" MouseDoubleClick="LargeFilesGrid_MouseDoubleClick">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="文件名" Binding="{Binding Name}" Width="1.5*"/>
                                     <DataGridTextColumn Header="大小" Binding="{Binding SizeText}" SortMemberPath="Size" Width="110"/>
@@ -222,10 +301,10 @@
                     <TabItem Header="目录排行">
                         <Grid Margin="4,12,4,4">
                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-                                <Button Style="{StaticResource BaseButton}" Content="复制路径" Click="CopySelectedPath_Click"/>
-                                <Button Style="{StaticResource BaseButton}" Content="打开目录" Margin="8,0,0,0" Click="OpenSelected_Click"/>
-                            </StackPanel>
+                            <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock x:Name="FolderCountText" Text="目录排行" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal"><Button Style="{StaticResource BaseButton}" Content="复制路径" Click="CopySelectedPath_Click"/><Button Style="{StaticResource BaseButton}" Content="打开目录" Margin="8,0,0,0" Click="OpenSelected_Click"/></StackPanel>
+                            </Grid>
                             <DataGrid x:Name="FoldersGrid" Grid.Row="1" MouseDoubleClick="FoldersGrid_MouseDoubleClick">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="目录" Binding="{Binding Name}" Width="1.2*"/>
@@ -249,49 +328,48 @@
                     </TabItem>
 
                     <TabItem Header="AI 审查">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <Grid Margin="4,12,4,4">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="320"/>
                             </Grid.RowDefinitions>
-                            <Border Background="#101A2A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="14">
+                            <Border Background="#0D1725" CornerRadius="9" Padding="14">
                                 <Grid>
-                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="76"/><ColumnDefinition Width="1.6*"/>
-                                        <ColumnDefinition Width="64"/><ColumnDefinition Width="0.75*"/>
-                                        <ColumnDefinition Width="64"/><ColumnDefinition Width="0.8*"/>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="API 地址" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-                                    <TextBox x:Name="AiEndpointTextBox" Grid.Column="1" Grid.ColumnSpan="5"
-                                             Text="https://api.openai.com/v1/responses"/>
-
-                                    <TextBlock Grid.Row="1" Text="模型" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,10,0,0"/>
-                                    <TextBox x:Name="AiModelTextBox" Grid.Row="1" Grid.Column="1" Text="gpt-4.1-mini" Margin="0,10,10,0"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="协议" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,10,0,0"/>
-                                    <ComboBox x:Name="AiProtocolComboBox" Grid.Row="1" Grid.Column="3" SelectedIndex="0" Margin="0,10,10,0" SelectionChanged="AiProtocolComboBox_SelectionChanged">
-                                        <ComboBoxItem Content="OpenAI Responses" Tag="responses"/>
-                                        <ComboBoxItem Content="兼容 Chat API" Tag="chat"/>
-                                    </ComboBox>
-                                    <TextBlock Grid.Row="1" Grid.Column="4" Text="API Key" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,10,0,0"/>
-                                    <PasswordBox x:Name="AiApiKeyBox" Grid.Row="1" Grid.Column="5" Margin="0,10,0,0" ToolTip="仅保存在当前进程内；留空时读取 OPENAI_API_KEY"/>
-
-                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,13,0,0">
-                                        <CheckBox x:Name="AiIncludeNamesCheckBox" Content="允许发送文件名和脱敏路径" ToolTip="关闭时只发送扩展名、大小、文件年龄、类别和位置类型"/>
+                                    <Grid Grid.ColumnSpan="3"><Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="API 地址" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="12"/>
+                                        <TextBox x:Name="AiEndpointTextBox" Grid.Column="1" Text="https://api.openai.com/v1/responses"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Margin="0,12,10,0">
+                                        <TextBlock Text="模型" Style="{StaticResource MetricLabel}"/>
+                                        <TextBox x:Name="AiModelTextBox" Text="gpt-4.1-mini"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,10,0">
-                                        <TextBlock Text="候选数" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <ComboBox x:Name="AiMaxFilesComboBox" SelectedIndex="1" Width="125">
-                                            <ComboBoxItem Content="前 50 个" Tag="50"/>
-                                            <ComboBoxItem Content="前 100 个" Tag="100"/>
-                                            <ComboBoxItem Content="前 200 个" Tag="200"/>
-                                            <ComboBoxItem Content="前 500 个" Tag="500"/>
-                                            <ComboBoxItem Content="全部大文件" Tag="2000"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,12,10,0">
+                                        <TextBlock Text="协议" Style="{StaticResource MetricLabel}"/>
+                                        <ComboBox x:Name="AiProtocolComboBox" SelectedIndex="0" SelectionChanged="AiProtocolComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="OpenAI Responses" Tag="responses"/>
+                                            <ComboBoxItem Content="兼容 Chat API" Tag="chat"/>
                                         </ComboBox>
                                     </StackPanel>
-                                    <Grid Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,12,0,0">
+                                        <TextBlock Text="API Key" Style="{StaticResource MetricLabel}"/>
+                                        <PasswordBox x:Name="AiApiKeyBox" ToolTip="仅保存在当前进程内；留空时读取 OPENAI_API_KEY"/>
+                                    </StackPanel>
+                                    <WrapPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,12,0,0" VerticalAlignment="Center">
+                                        <CheckBox x:Name="AiIncludeNamesCheckBox" Content="允许发送文件名和脱敏路径" ToolTip="关闭时只发送扩展名、大小、文件年龄、类别和位置类型" VerticalAlignment="Center" Margin="0,0,22,8"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8"><TextBlock Text="候选数" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12"/>
+                                            <ComboBox x:Name="AiMaxFilesComboBox" SelectedIndex="1" Width="132">
+                                                <ComboBoxItem Content="前 50 个" Tag="50"/><ComboBoxItem Content="前 100 个" Tag="100"/><ComboBoxItem Content="前 200 个" Tag="200"/><ComboBoxItem Content="前 500 个" Tag="500"/><ComboBoxItem Content="全部大文件" Tag="2000"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </WrapPanel>
+                                    <Grid Grid.Row="3" Grid.ColumnSpan="3" Margin="0,4,0,0">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <ProgressBar x:Name="AiReviewProgressBar" Height="5" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center"
                                                      Background="#263247" Foreground="{StaticResource AccentBrush}" BorderThickness="0" Margin="0,0,10,0"/>
@@ -301,12 +379,10 @@
                                 </Grid>
                             </Border>
 
-                            <Grid Grid.Row="1" Margin="5,9,5,9">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Text="默认仅发送元数据，不读取文件内容；建议仅作参考，程序不会自动删除或移动任何文件。"
-                                           Foreground="{StaticResource MutedBrush}" FontSize="11"/>
-                                <TextBlock x:Name="AiStatusText" Grid.Column="1" Text="请先完成磁盘扫描" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
-                            </Grid>
+                            <StackPanel Grid.Row="1" Margin="5,10,5,12">
+                                <TextBlock Text="默认仅发送元数据，不读取文件内容；建议仅作参考。" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="AiStatusText" Text="请先完成磁盘扫描" Foreground="{StaticResource SecondaryAccentBrush}" FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
 
                             <DataGrid x:Name="AiReviewsGrid" Grid.Row="2" MouseDoubleClick="AiReviewsGrid_MouseDoubleClick">
                                 <DataGrid.Columns>
@@ -320,12 +396,13 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>
+                        </ScrollViewer>
                     </TabItem>
 
                     <TabItem Header="访问问题">
                         <Grid Margin="4,12,4,4">
                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                            <TextBlock Text="这些项目未计入统计；系统保护目录出现“无权限”通常属于正常现象。" Foreground="{StaticResource MutedBrush}" Margin="5,0,0,10"/>
+                            <StackPanel Margin="5,0,0,12"><TextBlock x:Name="IssueCountText" Text="访问问题" Foreground="{StaticResource WarningBrush}" FontSize="12"/><TextBlock Text="部分内容可能未计入统计；系统保护目录出现“无权限”通常属于正常现象。" Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
                             <DataGrid x:Name="IssuesGrid" Grid.Row="1">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="状态" Binding="{Binding KindText}" Width="100"/>
@@ -336,12 +413,14 @@
                         </Grid>
                     </TabItem>
                 </TabControl>
+                </Grid>
             </Border>
         </Grid>
 
         <Grid Grid.Row="4" Margin="3,8,3,0">
-            <ProgressBar x:Name="ScanProgressBar" Height="3" VerticalAlignment="Top" IsIndeterminate="False" Visibility="Collapsed" Foreground="{StaticResource AccentBrush}" Background="#223047" BorderThickness="0"/>
-            <TextBlock x:Name="StatusText" Text="选择一个磁盘或目录后开始扫描" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis"/>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" Text="选择一个磁盘或目录后开始扫描" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,16,0"/>
+            <TextBlock Grid.Column="1" Text="本地扫描 · 文件内容不会被读取" Foreground="{StaticResource MutedBrush}" FontSize="10" VerticalAlignment="Center"/>
         </Grid>
     </Grid>
 </Window>
